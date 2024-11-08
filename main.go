@@ -152,13 +152,13 @@ var BuildCmd = &cobra.Command{
 		if len(args) == 0 {
 			ctx := context.Background()
 			if err := buildAll(ctx, false); err != nil {
-				_, err := fmt.Printf("error building site: %w", err); return err
+				return fmt.Errorf("error building site: %w", err)
 			}
 			return nil
 		}
 
 		if err := build(args[0], os.Stdout, globals()); err != nil {
-			_, err := fmt.Printf("error building file %q", args[0]); return err
+			return fmt.Errorf("error building file %q", args[0])
 		}
 
 		return nil
@@ -174,7 +174,7 @@ var GenerateCmd = &cobra.Command{
 	Args:    cobra.RangeArgs(0, 1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := generate(os.Stdin, os.Stdout, globals()); err != nil {
-			_, err := fmt.Printf("error generating fragment: %w", err); return err
+			return fmt.Errorf("error generating fragment: %w", err)
 		}
 
 		return nil
@@ -192,16 +192,16 @@ var ServeCmd = &cobra.Command{
 
 		_, err := cmd.Flags().GetString("bind")
 		if err != nil {
-			_, err := fmt.Printf("error getting bind flag: %w", err); return err
+			return fmt.Errorf("error getting bind flag: %w", err)
 		}
 
 		_, err = cmd.Flags().GetString("root")
 		if err != nil {
-			_, err := fmt.Printf("error getting root flag: %w", err); return err
+			return fmt.Errorf("error getting root flag: %w", err)
 		}
 
 		if err := wg.Wait(); err != nil {
-			_, err := fmt.Printf("error running serve: %w", err); return err
+			return fmt.Errorf("error running serve: %w", err)
 		}
 
 		return nil
@@ -222,7 +222,7 @@ are display instead of all variables (the default behaviors).`,
 
 		vars, _, err := getVars(args[0], globals())
 		if err != nil {
-			_, err := fmt.Printf("error getting variables from %s: %w", args[0], err); return err
+			return fmt.Errorf("error getting variables from %s: %w", args[0], err)
 		}
 
 		if len(args) > 1 {
@@ -254,13 +254,13 @@ var WatchCmd = &cobra.Command{
 
 		wg.Go(func() error {
 			if err := buildAll(ctx, true); err != nil {
-				_, err := fmt.Printf("error watching for changes: %w", err); return err
+				return fmt.Errorf("error watching for changes: %w", err)
 			}
 			return nil
 		})
 
 		if err := wg.Wait(); err != nil {
-			_, err := fmt.Printf("error running watch: %w", err); return err
+			return fmt.Errorf("error running watch: %w", err)
 		}
 
 		return nil
