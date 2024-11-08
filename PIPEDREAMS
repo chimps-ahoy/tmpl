@@ -1,0 +1,51 @@
+Ideally, I'd like to make a static site generator that uses a `troff' like
+workflow, using several preprocessor programs and a Makefile.
+
+The biggest obstacle when designing this is that the markdown-html translator
+(which should be the final step in the pipeline) requires knowledge of the same
+variables that the markdown preprocessor uses (title, layout, keywords, and
+'content'), but if these are separate programs, we would need some stinky
+mechanism to communicate this, which would probably overcomplicate things to
+the point of completely negating the simplicity benefits of this workflow.
+
+My current working solution would be to use the 'include' capabilities of the
+markdown preprocessor (which are created by the user using shell scripts) to
+insert the contents of a md file into the template. Then, we can run the
+markdown preprocessor on the output to generate the final html. We could
+communicate the variables needed by abusing html comment tags (one step in the
+pipeline could even remove html comments, which would save bandwidth, and could
+be disabled with a commandline flag).
+
+Another decision to be made is in what order all these operations should occur.
+Should the markdown preprocessor run before the markdown-html translator
+(as the name implies)? Should the markdown be pasted into the templates before
+or after being translated?
+
+The path that produces the fewest number of passes and requires the least
+reasoning by the user should be chosen.
+
+	md (page) file -> template -> mdpp -> html translator (does this ever cause errors?)
+		
+	md (page) file -> html translator (preserves pp markup) -> template -> mdpp
+
+	md (page) file -> mdpp -> html translator -> template -> mdpp (to handle titles, etc)
+
+These are (some of) the possible pipelines to be taken, in order of preference
+(if possible). I do not know if pasting the markdown into the templates and
+_then_ translating the entire file would cause errors (inline html works with
+markdown, so it shouldn't?). If it does not, the first pipeline has the fewest
+number of passes, and seems logical (although it may sound strange when written
+here). I think it makes sense, logically, inserting the pages into the template
+before preprocessing, because it is similar to cpp `#include's, and you would
+expect includes to be handled before macro expansions. Given that the includes
+_are_ macro expansions (by way of the `zs' style plugin scripts), this doesn't
+make sense, though, and we would need to use a different include mechanism (for
+the templates, at the very least).
+
+Here are is a list of programs that will be needed to make the site builder
+work (subject to change):
+    - markdown-html (easy; people have done this, but i kinda wanna do it myself :3)
+    - mdpp (easy enough; copy mostly from zs)
+    - wikilink preprocessor (should also be easy, but could be criticised for
+    requiring an additional pass)
+    - (potentially) separate include mechanism for template files
