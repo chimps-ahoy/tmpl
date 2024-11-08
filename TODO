@@ -1,0 +1,24 @@
+# MAIN GOALS:
+
+- Make working directory stuff clearer (where everything is found and ran is
+unclear; makes plugins kinda confusing)
+
+- Allow a _little_ more configuration (maybe i dont want .zs and i dont want to
+recompile to change that? maybe .zs isn't the best example, but i want to be
+able to layout my directory the way _i_ want, not the way this program expects)
+
+- Maybe make the YAML a bit better (lists, etc)
+
+- Support semantic stuff better (<del> and <ins>, <nav>?)
+
+# THINGS WE __DON'T WANT TO DO__:
+
+- Make the build more complicated
+  - __NO CONDITIONALS, IF-ELSE, LOOPS, FUNCTIONS, ANY PROGRAMMABILITY IN THE
+    MARKDOWN ETC__
+    - except plugins ofc
+
+- _add_ more features*
+   - *i think
+
+- make it more complicated
