@@ -4,24 +4,24 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
-	"log"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/yuin/goldmark"
 	// "github.com/yuin/goldmark-meta"
 	// "github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
+	// "github.com/yuin/goldmark/parser"
+	// "github.com/yuin/goldmark/renderer/html"
 	"go.abhg.dev/goldmark/wikilink"
 	"gopkg.in/yaml.v2"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -96,85 +96,85 @@ func NewTicker(d time.Duration) *time.Ticker {
 }
 
 // RootCmd is the base command when called without any subcommands
-var RootCmd = &cobra.Command{
-	Use:     os.Args[0],
-	Short:   "simple static site generator",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		var extensions []goldmark.Extender
-		for _, name := range viper.GetStringSlice("extensions") {
-			if extender, valid := Extensions[name]; valid {
-				extensions = append(extensions, extender)
-			} else {
-				log.Printf("invalid extension: %s", name)
-			}
-		}
-
-		Parser = goldmark.New(
-			goldmark.WithExtensions(extensions...),
-			goldmark.WithParserOptions(
-				parser.WithAttribute(),
-				parser.WithAutoHeadingID(),
-			),
-			goldmark.WithRendererOptions(
-				html.WithXHTML(),
-				html.WithUnsafe(),
-			),
-		)
-
-		return nil
-	},
-}
-
-// BuildCmd is the build sub-command that performs whole builds or single builds
-var BuildCmd = &cobra.Command{
-	Use:   "build [file]",
-	Short: "Builds the whole site or a single file",
-	Args:  cobra.RangeArgs(0, 1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			ctx := context.Background()
-			if err := buildAll(ctx, false); err != nil {
-				return fmt.Errorf("error building site: %s", err)
-			}
-			return nil
-		}
-
-		if err := build(args[0], os.Stdout, globals()); err != nil {
-			return fmt.Errorf("error building file %s", args[0])
-		}
-
-		return nil
-	},
-}
-
-// VarCmd is the var sub-command that performs whole builds or single builds
-var VarCmd = &cobra.Command{
-	Use:     "var <file> [<var>...]",
-	Aliases: []string{"vars"},
-	Short:   "Display variables for the specified file",
-	Args: cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		s := ""
-
-		vars, _, err := getVars(args[0], globals())
-		if err != nil {
-			return fmt.Errorf("error getting variables from %s: %s", args[0], err)
-		}
-
-		if len(args) > 1 {
-			for _, a := range args[1:] {
-				s = s + vars[a] + "\n"
-			}
-		} else {
-			for k, v := range vars {
-				s = s + k + ":" + v + "\n"
-			}
-		}
-		fmt.Println(strings.TrimSpace(s))
-
-		return nil
-	},
-}
+// var RootCmd = &cobra.Command{
+// 	Use:     os.Args[0],
+// 	Short:   "simple static site generator",
+// 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+// 		var extensions []goldmark.Extender
+// 		for _, name := range viper.GetStringSlice("extensions") {
+// 			if extender, valid := Extensions[name]; valid {
+// 				extensions = append(extensions, extender)
+// 			} else {
+// 				log.Printf("invalid extension: %s", name)
+// 			}
+// 		}
+//
+// 		Parser = goldmark.New(
+// 			goldmark.WithExtensions(extensions...),
+// 			goldmark.WithParserOptions(
+// 				parser.WithAttribute(),
+// 				parser.WithAutoHeadingID(),
+// 			),
+// 			goldmark.WithRendererOptions(
+// 				html.WithXHTML(),
+// 				html.WithUnsafe(),
+// 			),
+// 		)
+//
+// 		return nil
+// 	},
+// }
+//
+// // BuildCmd is the build sub-command that performs whole builds or single builds
+// var BuildCmd = &cobra.Command{
+// 	Use:   "build [file]",
+// 	Short: "Builds the whole site or a single file",
+// 	Args:  cobra.RangeArgs(0, 1),
+// 	RunE: func(cmd *cobra.Command, args []string) error {
+// 		if len(args) == 0 {
+// 			ctx := context.Background()
+// 			if err := buildAll(ctx, false); err != nil {
+// 				return fmt.Errorf("error building site: %s", err)
+// 			}
+// 			return nil
+// 		}
+//
+// 		if err := build(args[0], os.Stdout, globals()); err != nil {
+// 			return fmt.Errorf("error building file %s", args[0])
+// 		}
+//
+// 		return nil
+// 	},
+// }
+//
+// // VarCmd is the var sub-command that performs whole builds or single builds
+// var VarCmd = &cobra.Command{
+// 	Use:     "var <file> [<var>...]",
+// 	Aliases: []string{"vars"},
+// 	Short:   "Display variables for the specified file",
+// 	Args: cobra.MinimumNArgs(1),
+// 	RunE: func(cmd *cobra.Command, args []string) error {
+// 		s := ""
+//
+// 		vars, _, err := getVars(args[0], globals())
+// 		if err != nil {
+// 			return fmt.Errorf("error getting variables from %s: %s", args[0], err)
+// 		}
+//
+// 		if len(args) > 1 {
+// 			for _, a := range args[1:] {
+// 				s = s + vars[a] + "\n"
+// 			}
+// 		} else {
+// 			for k, v := range vars {
+// 				s = s + k + ":" + v + "\n"
+// 			}
+// 		}
+// 		fmt.Println(strings.TrimSpace(s))
+//
+// 		return nil
+// 	},
+// }
 
 // renameExt renames extension (if any) from oldext to newext
 // If oldext is an empty string - extension is extracted automatically.
@@ -263,7 +263,7 @@ func getVars(path string, globals Vars) (Vars, string, error) {
 
 	b, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Printf("error getting vars from %q: %w", path, err)
+		fmt.Printf("error getting vars from %q: %q", path, err)
 		return nil, "", errors.New("358")
 	}
 	s := string(b)
@@ -461,7 +461,7 @@ func build(path string, w io.Writer, vars Vars) error {
 	return buildRaw(path, w)
 }
 
-func buildAll(ctx context.Context, watch bool) error {
+func buildAll(ctx context.Context) error {
 	ticker := NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -524,10 +524,10 @@ func buildAll(ctx context.Context, watch bool) error {
 					modified = false
 				}
 			}
-			if !watch {
-				return err
-			}
 			lastModified = time.Now()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
@@ -541,41 +541,43 @@ func ensureFirstPath(p string) {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	RootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "config file (default: .zs/config.yml)")
-
-	RootCmd.PersistentFlags().StringSliceP("extensions", "e", MapKeys(Extensions), "override and enable specific extensions")
-	RootCmd.PersistentFlags().StringP("title", "t", "", "site title ($ZS_TITLE)")
-	RootCmd.PersistentFlags().StringP("description", "d", "", "site description ($ZS_DESCRIPTION)")
-	RootCmd.PersistentFlags().StringP("keywords", "k", "", "site keywords ($ZS_KEYWORDS)")
-	RootCmd.PersistentFlags().StringSliceP("vars", "v", nil, "additional variables")
-
-	RootCmd.PersistentFlags().StringP("opening-delim", "o", "{{", "opening delimiter for plugins")
-	RootCmd.PersistentFlags().StringP("closing-delim", "c", "{{", "closing delimiter for plugins")
-
-	viper.BindPFlag("extensions", RootCmd.PersistentFlags().Lookup("extensions"))
+	// cobra.OnInitialize(initConfig)
+	//
+	// RootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "config file (default: .zs/config.yml)")
+	//
+	// RootCmd.PersistentFlags().StringSliceP("extensions", "e", MapKeys(Extensions), "override and enable specific extensions")
+	// RootCmd.PersistentFlags().StringP("title", "t", "", "site title ($ZS_TITLE)")
+	// RootCmd.PersistentFlags().StringP("description", "d", "", "site description ($ZS_DESCRIPTION)")
+	// RootCmd.PersistentFlags().StringP("keywords", "k", "", "site keywords ($ZS_KEYWORDS)")
+	// RootCmd.PersistentFlags().StringSliceP("vars", "v", nil, "additional variables")
+	//
+	// RootCmd.PersistentFlags().StringP("opening-delim", "o", "{{", "opening delimiter for plugins")
+	// RootCmd.PersistentFlags().StringP("closing-delim", "c", "{{", "closing delimiter for plugins")
+	//
+	// viper.BindPFlag("extensions", RootCmd.PersistentFlags().Lookup("extensions"))
 	viper.SetDefault("extensions", MapKeys(Extensions))
 
-	viper.BindPFlag("title", RootCmd.PersistentFlags().Lookup("title"))
+	// viper.BindPFlag("title", RootCmd.PersistentFlags().Lookup("title"))
 	viper.SetDefault("title", "")
 
-	viper.BindPFlag("description", RootCmd.PersistentFlags().Lookup("description"))
+	// viper.BindPFlag("description", RootCmd.PersistentFlags().Lookup("description"))
 	viper.SetDefault("description", "")
 
-	viper.BindPFlag("keywords", RootCmd.PersistentFlags().Lookup("keywords"))
+	// viper.BindPFlag("keywords", RootCmd.PersistentFlags().Lookup("keywords"))
 	viper.SetDefault("keywords", "")
 
-	viper.BindPFlag("vars", RootCmd.PersistentFlags().Lookup("vars"))
+	// viper.BindPFlag("vars", RootCmd.PersistentFlags().Lookup("vars"))
 	viper.SetDefault("vars", "")
 
-	viper.BindPFlag("opening-delim", RootCmd.PersistentFlags().Lookup("opening-delim"))
+	// viper.BindPFlag("opening-delim", RootCmd.PersistentFlags().Lookup("opening-delim"))
 	viper.SetDefault("opening-delim", "{{")
-	viper.BindPFlag("closing-delim", RootCmd.PersistentFlags().Lookup("closing-delim"))
+	// viper.BindPFlag("closing-delim", RootCmd.PersistentFlags().Lookup("closing-delim"))
 	viper.SetDefault("closing-delim", "}}")
 
-	RootCmd.AddCommand(BuildCmd)
-	RootCmd.AddCommand(VarCmd)
+	// RootCmd.AddCommand(BuildCmd)
+	// RootCmd.AddCommand(VarCmd)
 
 	// prepend .zs to $PATH, so plugins will be found before OS commands
 	w, _ := os.Getwd()
@@ -620,7 +622,28 @@ func initConfig() {
 // }
 
 func main() {
-	// prepend .zs to $PATH, so plugins will be found before OS commands
+	vers := flag.Bool("v", false, "get version info")
+	getv := flag.Bool("V", false, "parse variables from file")
+	flag.Parse()
+
+	if *vers {
+		fmt.Println("version 0 or wtv")
+		os.Exit(0)
+	}
+
+	if *getv {
+		for _, f := range(flag.Args()) {
+			getVars(f, globals())
+		}
+	} else if flag.NArg() > 0 {
+		for _, f := range(flag.Args()) {
+			build(f, os.Stdout, globals())
+		}
+	} else {
+		log.Printf("wouldve tried to build all...")
+		//buildAll(context.Background())
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal("%e: error getting current working directory", err)
@@ -630,8 +653,8 @@ func main() {
 	// initializes Ignore (.zsignore) patterns
 	// Ignore = ParseIgnoreFile(ZSIGNORE)
 
-	if err := RootCmd.Execute(); err != nil {
-		os.Exit(1)
-		// log.Fatal(err)
-	}
+	// if err := RootCmd.Execute(); err != nil {
+	// 	os.Exit(1)
+	// 	// log.Fatal(err)
+	// }
 }
