@@ -1,4 +1,3 @@
-// Package main is a command-lint tool `zs` called Zen Static for generating static websites
 package main
 
 import (
@@ -10,10 +9,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"text/template"
 	"time"
 	"log"
@@ -26,20 +23,19 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 	"go.abhg.dev/goldmark/wikilink"
-	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v2"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
 const (
 	// ZSDIR is the default directory for storing layouts and extensions
-	ZSDIR = ".zs"
+	ZSDIR = ".sss"
 
 	// ZSCONFIG is the default configuration name (without extension)
 	ZSCONFIG = "config"
 
 	// ZSIGNORE is the default ignore file
-	ZSIGNORE = ".zsignore"
+	ZSIGNORE = ".ignore"
 
 	// PUBDIR is the default directory for publishing final built content
 	PUBDIR = ".pub"
@@ -48,11 +44,7 @@ const (
 	DefaultIgnore = `*~
 *.bak
 .*
-
-COPYING
-LICENSE
-Makefile
-README.md`
+`
 )
 
 // Ignore holds a set of patterns to ignore from parsing a .zsignore file
@@ -105,17 +97,8 @@ func NewTicker(d time.Duration) *time.Ticker {
 
 // RootCmd is the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:     "zs",
-	Short:   "zs the zen static site generator",
-	Long: `zs is an extremely minimal static site generator written in Go.
-
-  - Keep your texts in markdown, or HTML format right in the main directory of your blog/site.
-  - Keep all service files (extensions, layout pages, deployment scripts etc) in the .zs subdirectory.
-  - Define variables in the header of the content files using YAML front matter:
-  - Use placeholders for variables and plugins in your markdown or html files, e.g. {{ title }} or {{ command arg1 arg2 }}.
-  - Write extensions in any language you like and put them into the .zs sub-directory.
-  - Everything the extensions prints to stdout becomes the value of the placeholder.
-`,
+	Use:     os.Args[0],
+	Short:   "simple static site generator",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		var extensions []goldmark.Extender
 		for _, name := range viper.GetStringSlice("extensions") {
@@ -144,64 +127,20 @@ var RootCmd = &cobra.Command{
 
 // BuildCmd is the build sub-command that performs whole builds or single builds
 var BuildCmd = &cobra.Command{
-	Use:   "build [<file>]",
+	Use:   "build [file]",
 	Short: "Builds the whole site or a single file",
-	Long:  `The build command builds the entire site or a single file if specified.`,
 	Args:  cobra.RangeArgs(0, 1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			ctx := context.Background()
 			if err := buildAll(ctx, false); err != nil {
-				return fmt.Errorf("error building site: %w", err)
+				return fmt.Errorf("error building site: %s", err)
 			}
 			return nil
 		}
 
 		if err := build(args[0], os.Stdout, globals()); err != nil {
-			return fmt.Errorf("error building file %q", args[0])
-		}
-
-		return nil
-	},
-}
-
-// GenerateCmd is the generate sub-command that builds partial fragments
-var GenerateCmd = &cobra.Command{
-	Use:     "generate",
-	Aliases: []string{"gen"},
-	Short:   "Generates partial fragments",
-	Long:    `The generate command parses and renders partial fragments from stdin and writes to stdout`,
-	Args:    cobra.RangeArgs(0, 1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := generate(os.Stdin, os.Stdout, globals()); err != nil {
-			return fmt.Errorf("error generating fragment: %w", err)
-		}
-
-		return nil
-	},
-}
-
-// ServeCmd is the serve sub-command that performs whole builds or single builds
-var ServeCmd = &cobra.Command{
-	Use:   "serve [flags]",
-	Short: "Serves the site and rebuilds automatically",
-	Long:  `The serve command serves the site and watches for rebuilds automatically`,
-	Args:  cobra.RangeArgs(0, 1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var wg errgroup.Group
-
-		_, err := cmd.Flags().GetString("bind")
-		if err != nil {
-			return fmt.Errorf("error getting bind flag: %w", err)
-		}
-
-		_, err = cmd.Flags().GetString("root")
-		if err != nil {
-			return fmt.Errorf("error getting root flag: %w", err)
-		}
-
-		if err := wg.Wait(); err != nil {
-			return fmt.Errorf("error running serve: %w", err)
+			return fmt.Errorf("error building file %s", args[0])
 		}
 
 		return nil
@@ -213,16 +152,13 @@ var VarCmd = &cobra.Command{
 	Use:     "var <file> [<var>...]",
 	Aliases: []string{"vars"},
 	Short:   "Display variables for the specified file",
-	Long: `The var command extracts and display sll teh variables defined in a file.
-If the name of variables (optional) are passed as additional arguments, only those variables
-are display instead of all variables (the default behaviors).`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s := ""
 
 		vars, _, err := getVars(args[0], globals())
 		if err != nil {
-			return fmt.Errorf("error getting variables from %s: %w", args[0], err)
+			return fmt.Errorf("error getting variables from %s: %s", args[0], err)
 		}
 
 		if len(args) > 1 {
@@ -235,33 +171,6 @@ are display instead of all variables (the default behaviors).`,
 			}
 		}
 		fmt.Println(strings.TrimSpace(s))
-
-		return nil
-	},
-}
-
-// WatchCmd is the watch sub-command that performs whole builds or single builds
-var WatchCmd = &cobra.Command{
-	Use:   "watch",
-	Short: "Watches for file changes and rebuilds modified files",
-	Long:  `The watch command watches for any changes to files and rebuilds them automatically`,
-	Args:  cobra.RangeArgs(0, 1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var wg errgroup.Group
-
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer cancel()
-
-		wg.Go(func() error {
-			if err := buildAll(ctx, true); err != nil {
-				return fmt.Errorf("error watching for changes: %w", err)
-			}
-			return nil
-		})
-
-		if err := wg.Wait(); err != nil {
-			return fmt.Errorf("error running watch: %w", err)
-		}
 
 		return nil
 	},
@@ -623,26 +532,6 @@ func buildAll(ctx context.Context, watch bool) error {
 	}
 }
 
-// gen generates partial fragments
-func generate(r io.Reader, w io.Writer, v Vars) error {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	body := string(data)
-
-	source, err := render(body, v)
-	if err != nil {
-		return err
-	}
-
-	if err := Parser.Convert([]byte(source), w); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func ensureFirstPath(p string) {
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
 	if len(paths) > 0 && paths[0] != p {
@@ -654,11 +543,9 @@ func ensureFirstPath(p string) {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().BoolP("debug", "D", false, "enable debug logging $($ZS_DEBUG)")
 	RootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "config file (default: .zs/config.yml)")
 
 	RootCmd.PersistentFlags().StringSliceP("extensions", "e", MapKeys(Extensions), "override and enable specific extensions")
-	RootCmd.PersistentFlags().BoolP("production", "p", false, "enable production mode ($ZS_PRODUCTION)")
 	RootCmd.PersistentFlags().StringP("title", "t", "", "site title ($ZS_TITLE)")
 	RootCmd.PersistentFlags().StringP("description", "d", "", "site description ($ZS_DESCRIPTION)")
 	RootCmd.PersistentFlags().StringP("keywords", "k", "", "site keywords ($ZS_KEYWORDS)")
@@ -667,14 +554,8 @@ func init() {
 	RootCmd.PersistentFlags().StringP("opening-delim", "o", "{{", "opening delimiter for plugins")
 	RootCmd.PersistentFlags().StringP("closing-delim", "c", "{{", "closing delimiter for plugins")
 
-	viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug"))
-	viper.SetDefault("debug", false)
-
 	viper.BindPFlag("extensions", RootCmd.PersistentFlags().Lookup("extensions"))
 	viper.SetDefault("extensions", MapKeys(Extensions))
-
-	viper.BindPFlag("production", RootCmd.PersistentFlags().Lookup("production"))
-	viper.SetDefault("production", false)
 
 	viper.BindPFlag("title", RootCmd.PersistentFlags().Lookup("title"))
 	viper.SetDefault("title", "")
@@ -693,14 +574,8 @@ func init() {
 	viper.BindPFlag("closing-delim", RootCmd.PersistentFlags().Lookup("closing-delim"))
 	viper.SetDefault("closing-delim", "}}")
 
-	ServeCmd.Flags().StringP("bind", "b", ":8000", "set the [<address>]:<port> to listen on")
-	ServeCmd.Flags().StringP("root", "r", PUBDIR, "set the root directory to serve")
-
 	RootCmd.AddCommand(BuildCmd)
-	RootCmd.AddCommand(GenerateCmd)
-	RootCmd.AddCommand(ServeCmd)
 	RootCmd.AddCommand(VarCmd)
-	RootCmd.AddCommand(WatchCmd)
 
 	// prepend .zs to $PATH, so plugins will be found before OS commands
 	w, _ := os.Getwd()
@@ -726,7 +601,7 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Printf("%e: error reading config %s (using defaults)", err, viper.ConfigFileUsed())
+			log.Printf("%s: error reading config %s (using defaults)", err, viper.ConfigFileUsed())
 		}
 	}
 }
@@ -756,7 +631,7 @@ func main() {
 	// Ignore = ParseIgnoreFile(ZSIGNORE)
 
 	if err := RootCmd.Execute(); err != nil {
-		log.Printf("%e: error executing command", err)
 		os.Exit(1)
+		// log.Fatal(err)
 	}
 }

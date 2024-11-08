@@ -1,4 +1,4 @@
-module github.com/chimps-ahoy/zs
+module github.com/chimps-ahoy/sssg
 
 go 1.23.2
 
@@ -7,7 +7,6 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/yuin/goldmark v1.7.8
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
-	github.com/yuin/goldmark-meta v1.1.0
 	go.abhg.dev/goldmark/wikilink v0.5.0
 	golang.org/x/sync v0.9.0
 	gopkg.in/yaml.v2 v2.4.0
