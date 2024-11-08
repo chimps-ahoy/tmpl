@@ -20,8 +20,8 @@ import (
 	"github.com/yuin/goldmark"
 	// "github.com/yuin/goldmark-meta"
 	// "github.com/yuin/goldmark/extension"
-	// "github.com/yuin/goldmark/parser"
-	// "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 	"go.abhg.dev/goldmark/wikilink"
 	"gopkg.in/yaml.v2"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -196,10 +196,6 @@ func globals() Vars {
 		"title":       viper.GetString("title"),
 		"description": viper.GetString("description"),
 		"keywords":    viper.GetString("keywords"),
-	}
-
-	if viper.GetBool("production") {
-		vars["production"] = "1"
 	}
 
 	// Variables from the environment in the form of ZS_<name>=<value>
@@ -543,19 +539,6 @@ func ensureFirstPath(p string) {
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	// cobra.OnInitialize(initConfig)
-	//
-	// RootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "config file (default: .zs/config.yml)")
-	//
-	// RootCmd.PersistentFlags().StringSliceP("extensions", "e", MapKeys(Extensions), "override and enable specific extensions")
-	// RootCmd.PersistentFlags().StringP("title", "t", "", "site title ($ZS_TITLE)")
-	// RootCmd.PersistentFlags().StringP("description", "d", "", "site description ($ZS_DESCRIPTION)")
-	// RootCmd.PersistentFlags().StringP("keywords", "k", "", "site keywords ($ZS_KEYWORDS)")
-	// RootCmd.PersistentFlags().StringSliceP("vars", "v", nil, "additional variables")
-	//
-	// RootCmd.PersistentFlags().StringP("opening-delim", "o", "{{", "opening delimiter for plugins")
-	// RootCmd.PersistentFlags().StringP("closing-delim", "c", "{{", "closing delimiter for plugins")
-	//
 	// viper.BindPFlag("extensions", RootCmd.PersistentFlags().Lookup("extensions"))
 	viper.SetDefault("extensions", MapKeys(Extensions))
 
@@ -575,9 +558,6 @@ func init() {
 	viper.SetDefault("opening-delim", "{{")
 	// viper.BindPFlag("closing-delim", RootCmd.PersistentFlags().Lookup("closing-delim"))
 	viper.SetDefault("closing-delim", "}}")
-
-	// RootCmd.AddCommand(BuildCmd)
-	// RootCmd.AddCommand(VarCmd)
 
 	// prepend .zs to $PATH, so plugins will be found before OS commands
 	w, _ := os.Getwd()
@@ -631,6 +611,35 @@ func main() {
 		os.Exit(0)
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("%e: error getting current working directory", err)
+	}
+	ensureFirstPath(filepath.Join(cwd, ZSDIR))
+
+	var extensions []goldmark.Extender
+	for _, name := range viper.GetStringSlice("extensions") {
+		if extender, valid := Extensions[name]; valid {
+			extensions = append(extensions, extender)
+		} else {
+			log.Printf("invalid extension: %s", name)
+		}
+	}
+	// initializes Ignore (.zsignore) patterns
+	// Ignore = ParseIgnoreFile(ZSIGNORE)
+
+	Parser = goldmark.New(
+		goldmark.WithExtensions(extensions...),
+		goldmark.WithParserOptions(
+			parser.WithAttribute(),
+			parser.WithAutoHeadingID(),
+		),
+		goldmark.WithRendererOptions(
+			html.WithXHTML(),
+			html.WithUnsafe(),
+		),
+	)
+
 	if *getv {
 		for _, f := range(flag.Args()) {
 			getVars(f, globals())
@@ -639,22 +648,8 @@ func main() {
 		for _, f := range(flag.Args()) {
 			build(f, os.Stdout, globals())
 		}
-	} else {
-		log.Printf("wouldve tried to build all...")
-		//buildAll(context.Background())
+	} else if buildAll(context.Background()) == nil {
+		exit(0)
 	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("%e: error getting current working directory", err)
-	}
-	ensureFirstPath(filepath.Join(cwd, ZSDIR))
-
-	// initializes Ignore (.zsignore) patterns
-	// Ignore = ParseIgnoreFile(ZSIGNORE)
-
-	// if err := RootCmd.Execute(); err != nil {
-	// 	os.Exit(1)
-	// 	// log.Fatal(err)
-	// }
+	exit(1)
 }
