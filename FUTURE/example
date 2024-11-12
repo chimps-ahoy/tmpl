@@ -1,0 +1,166 @@
+stage 0 (template and content)
+===============================================================================
+template.html:
+---------
+
+```
+<html>
+	<head>
+		<title>
+			{{ title }}
+		</title>
+	</head>
+	<body>
+		#CONTENT
+	</body>
+<html>
+```
+
+content.md:
+--------
+
+```
+@title: homepage
+
+# Hello World!
+yadda yadda yadda
+etc
+```
+
+stage 1 (`tmpl`) ((working name))
+----------------------------------
+
+` tmpl template.html content.md `
+
+```
+@title: homepage
+
+<html>
+	<head>
+		<title>
+			{{ title }}
+		</title>
+	</head>
+	<body>
+		# Hello World!
+		yadda yadda yadda
+		etc
+	</body>
+<html>
+```
+
+stage 2 (`zpp`) ((working name))
+--------------------------------
+
+` tmpl template.html content.md | zpp `
+
+```
+<html>
+	<head>
+		<title>
+			homepage
+		</title>
+	</head>
+	<body>
+		# Hello World!
+		yadda yadda yadda
+		etc
+	</body>
+<html>
+```
+
+stage 3 (`md2html`)
+-------------------
+
+` tmpl template.html content.md | zpp | md2html `
+
+```
+<html>
+	<head>
+		<title>
+			homepage
+		</title>
+	</head>
+	<body>
+		<h1>Hello World!</h1>
+		<p>yadda yadda yadda
+		etc</p>
+	</body>
+<html>
+```
+
+And we're done!
+
+Things to consider:
+===============================================================================
+
+- Annotation for variable decl. and section inclusion
+	- want to make sure it doesn't conflict too much with regular html/md stuff.
+	- if there is a section inclusion that doesn't conflict with any md stuff,
+		we can also use that for section declaration within the content file
+		- we can even just use headers (and continue to use `#` for section
+			inclusion), so long as there are predefined headers that won't be used
+			by the user (so, instead of `#CONTENT`, maybe `#__CONTENT`?)
+
+- Variable decl `headers'
+	- The parser will just assign values to variables as they are encountered, so
+		the `header' construction at the top of the file is purely convention, but
+		we still need some mechanism to make sure we can have variable declarations
+		that get included before the rest of the template
+		- With our `predefined header/section' idea, this can be handled by having
+			the two predefined sections be `__CONTENT` and `__DECL`, or something
+			like that. Then, in the template we just have a `#__DECL` at the top,
+			maybe.
+			- The `#__DECL` could even be automatically assumed to be at the top of
+				the file, unless otherwise specified.
+			- `#__DECL` is from the top of the file til the first non-`@` line
+				(or whatever we choose the variable-declaration-annotation to
+				be), `#__CONTENT` is from the end of `#__DECL` til the end of
+				the file.
+
+- Section declaration in content file
+	- Most of this is covered in 1.2.1, but i list it here to remember
+
+- Command line flags
+	- I think we definitely need command flags to change the annotations,
+		regardless of what the defaults are (so bikesheeding over `#` over `@`
+		is meaningless)
+	- `zpp` should take a flag for the PATH it uses, and the default should
+		either be `''` or `'.'`, for security(?)
+	- The default behaviour of `tmpl` and `zpp` should be to continue silently
+		when encountering an error, just erasing that line or outputting
+		something funny (this matches `*roff` behaviour and i just like it,
+		even tho even just writing out sounds goofy and horrible)
+		- but we need flags to change this, of course
+			- for `zpp`
+				- `-Wunused` to display an error message when variables are
+					declared but never expanded by the preprocessor
+				- `-Wundef` to display an error message when an expansion does
+					not contain a declared variable and/or an executable that
+					in `PATH`
+					- Normally, this will just be blank
+				- `-Werror` to display error messages in any of these cases
+				- `-Wpedantic` to stop parsing and exit failure when encountering
+					any of these
+				- I couldve sworn i thought of more before this......
+
+Parsing
+===============================================================================
+
+- __All of these tools will be single-pass__
+- That causes some of the funny design that had lead up to this, but it will
+	make the individual programs simpler and i think it will make it easier
+	to reason about the overall system (once you learn how to use it)
+
+- We should make `zpp` smart to help with this though
+	- The parser should keep the read head at the _start_ of a macro expansion
+		while expanding, and then resume parsing from that point afterwards
+		- we already need to store the start of the macro so we know where to
+			spit the output after it is expanded
+		- this allows macros to output _more macros_ which sounds like a smell
+			and an anti-pattern, but it doesn't affect me if my users are
+			stupid and/or smelly
+			- upon further reflection and research, I think this is already
+				commonly done, notably by `cpp`, so it is not that clever or
+				cool
+				- but i don't think `zs` does this
