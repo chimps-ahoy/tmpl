@@ -1,0 +1,73 @@
+.TH TMPL 1 tmpl
+.SH NAME
+tmpl \- UNIX templating tool
+.SH SYNOPSIS
+.B tmpl
+.RB [ \-s
+.IR char ]
+.RB [ \-h
+.IR char ]
+.I TEMPLATE FILE
+.SH DESCRIPTION
+tmpl is a plaintext templating tool for UNIX systems.
+.P
+.I FILE
+is read and split into
+.I sections\fR.
+A section is declared by a line beginning with a string of any length of
+the
+.I section delimiter
+(default `#') and extends until the beginning of the next section or the end
+of file. The section is named with the first token following said string. The
+name is used for resubstitution into the
+.I TEMPLATE\fR.
+.P
+Within the
+.I TEMPLATE
+any lines beginning with the
+.I section delimiter
+are substituted for the
+.I section
+indicated by the first token following the delimiter. The rest of the line is
+discarded.
+.P
+The entirety of the file is specified by the predefined section
+.I @CONTENT
+unless a
+.I header character
+is specified by the
+.B \-h
+option, in which case
+.I @CONTENT
+begins at the first line which does not begin with the
+.I header character
+and continues until the end of file. An additional section named
+.I @HEADER
+is defined and spans from the beginning of the file to the start of
+.I @CONTENT
+.SH OPTIONS
+.TP
+.BI \-s " char"
+Sets the
+.I section delimiter
+to
+.I char\fR.
+Default value is `#'.
+.TP
+.BI \-h " char"
+Sets the
+.I header character
+to
+.I char\fR.
+If
+.I character
+is missing, there is no effect, and
+.I @HEADER
+will remain undefined.
+.SH EXAMPLES
+.EX
+tmpl foo bar
+.EE
+.SH SEE ALSO
+.BR ... ,
+.BR ... ,
