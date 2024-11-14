@@ -49,7 +49,14 @@ begins at the first line which does not begin with the
 and continues until the end of file. An additional section named
 .I @HEADER
 is defined and spans from the beginning of the file to the start of
-.I @CONTENT
+.I @CONTENT\fR.
+If a
+.I header character
+is not specified,
+.I @HEADER
+spans from the beginning of the file until the first defined section (not
+including
+.I @CONTENT\fR)
 .SH OPTIONS
 .TP
 .BI \-s " char"
