@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -5,56 +6,40 @@
 #define die(msg) fprintf(stderr, "%s: " msg "\n", argv[0])
 #define USAGE "[ -s char ][ -h char ] TEMPLATE FILE"
 
+#define MIN(x,y) (((x)<(y))?(x):(y))
+
 static char delim;
 static char special;
 
-static char **mapsecs(FILE *src, unsigned int *mapsize)
-{
-	int    size   = 10;
-	char **secmap = malloc(sizeof(*secmap) * size);
-
-	char  *line = strdup("#@HEADER\n");
-	size_t llen = 0;
-	unsigned long lno = 0;
-	do {
-		if (lno >= size) {
-			size *= 2;
-			if (!(secmap = realloc(secmap, size * sizeof(*secmap))))
-				return NULL;
-		}
-		secmap[lno++] = (*line == delim) ? strdup(line) : NULL;
-	} while (getline(&line, &llen, src) > 0);
-	free(line);
-	line = NULL;
-
-	*mapsize = size;
-	return secmap;
-}
-
-static void putsec(char *sec, FILE *src, char **secmap, unsigned int size)
-{
-	int target = 0;
-	while (target < size && secmap[target] && strcmp(sec, secmap[target++]));
-
-	size_t llen = 0;
-	char  *line = NULL;
-	unsigned long lno = 0;
-	while (getline(&line, &llen, src) > 0) {
-
-	}
-}
-
-static void subst(FILE *tmpl, FILE *src, char **secmap, unsigned int size)
+/* IDEA: putsec and subst coroutines?? */
+static void putsec(char *sec, size_t slen, FILE *src)
 {
 	size_t llen = 0;
+	int endl;
 	char *line = NULL;
-	while (getline(&line, &llen, tmpl) > 0) {
-		line[llen-1] = '\0';
-		if (*line != delim) {
+	bool print = false;
+	while ((endl = getline(&line, &llen, src)) > 0) {
+		line[endl-1] = '\0';
+		if (print && *line != delim)
 			puts(line);
-		} else {
-			putsec(line, src, secmap, size);
-		}
+		else if (*line == delim)
+			print = !strncmp(line, sec, MIN(slen, llen));
+	}
+	rewind(src);
+}
+
+/* TODO: strtok */
+static void subst(FILE *tmpl, FILE *src)
+{
+	size_t llen = 0;
+	int endl;
+	char *line = NULL;
+	while ((endl = getline(&line, &llen, tmpl)) > 0) {
+		line[endl-1] = '\0';
+		if (*line != delim)
+			puts(line);
+		else
+			putsec(line, llen, src);
 	}
 }
 
@@ -70,15 +55,9 @@ int main(int argc, char **argv)
 	FILE *tmpl = fopen(argv[1], "r");
 	FILE *src  = fopen(argv[2], "r");
 	if (!tmpl || !src)
-		goto usage;
+		goto errfile;
 
-	unsigned int size = 0;
-	char **secmap = mapsecs(src, &size);
-	if (!secmap)
-		goto errmem;
-
-	subst(tmpl, src, secmap, size);
-
+	subst(tmpl, src);
 	return EXIT_SUCCESS;
 
 errfile:
