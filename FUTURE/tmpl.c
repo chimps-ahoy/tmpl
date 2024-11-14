@@ -14,30 +14,39 @@ static char special;
 /* IDEA: putsec and subst coroutines?? */
 static void putsec(char *sec, size_t slen, FILE *src)
 {
-	size_t llen = 0;
-	int endl;
-	char *line = NULL;
+	char * line = strdup("#@HEADER\n");
+	size_t llen = sizeof("#@HEADER\n");;
+	int    endl = 9;
 	bool print = false;
-	while ((endl = getline(&line, &llen, src)) > 0) {
+	do {
 		line[endl-1] = '\0';
 		if (print && *line != delim)
 			puts(line);
 		else if (*line == delim)
 			print = !strncmp(line, sec, MIN(slen, llen));
-	}
+	} while ((endl = getline(&line, &llen, src)) > 0);
 	rewind(src);
+}
+
+static void putf(FILE *f)
+{
+	char c;
+	while ((c = getc(f)) != EOF) putc(c, stdout);
+	rewind(f);
 }
 
 /* TODO: strtok */
 static void subst(FILE *tmpl, FILE *src)
 {
-	size_t llen = 0;
 	int endl;
 	char *line = NULL;
+	size_t llen = 0;
 	while ((endl = getline(&line, &llen, tmpl)) > 0) {
 		line[endl-1] = '\0';
 		if (*line != delim)
 			puts(line);
+		else if (!strncmp(line, "#@CONTENT", llen))
+			putf(src);
 		else
 			putsec(line, llen, src);
 	}
