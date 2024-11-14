@@ -67,6 +67,9 @@ int main(int argc, char **argv)
 		goto errfile;
 
 	subst(tmpl, src);
+
+	fclose(tmpl);
+	fclose(src);
 	return EXIT_SUCCESS;
 
 errfile:
