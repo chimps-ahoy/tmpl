@@ -9,24 +9,8 @@
 #define MIN(x,y) (((x)<(y))?(x):(y))
 
 static char delim;
+static char tokdelims[5] = { ' ', '\t', '\n' };
 static char special;
-
-/* IDEA: putsec and subst coroutines?? */
-static void putsec(char *sec, size_t slen, FILE *src)
-{
-	char * line = strdup("#@HEADER\n");
-	size_t llen = sizeof("#@HEADER\n");;
-	int    endl = 9;
-	bool print = false;
-	do {
-		line[endl-1] = '\0';
-		if (print && *line != delim)
-			puts(line);
-		else if (*line == delim)
-			print = !strncmp(line, sec, MIN(slen, llen));
-	} while ((endl = getline(&line, &llen, src)) > 0);
-	rewind(src);
-}
 
 static void putf(FILE *f)
 {
@@ -35,20 +19,38 @@ static void putf(FILE *f)
 	rewind(f);
 }
 
-/* TODO: strtok */
+/* IDEA: putsec and subst coroutines?? */
+static void putsec(char *sec, size_t slen, FILE *src)
+{
+	if (!strncmp(sec, "@CONTENT", MIN(slen,sizeof("@CONTENT")))) {
+		putf(src);
+		return;
+	}
+	char * line = strdup("@HEADER\n");
+	size_t llen = sizeof("@HEADER\n");;
+	int    endl = 9;
+	bool print = false;
+	do {
+		line[endl-1] = '\0';
+		if (print && *line != delim)
+			puts(line);
+		else if (*line == delim)
+			print = !strncmp(line+1, sec, MIN(slen, llen-1));
+	} while ((endl = getline(&line, &llen, src)) > 0);
+	rewind(src);
+}
+
 static void subst(FILE *tmpl, FILE *src)
 {
 	int endl;
 	char *line = NULL;
 	size_t llen = 0;
 	while ((endl = getline(&line, &llen, tmpl)) > 0) {
-		line[endl-1] = '\0';
-		if (*line != delim)
-			puts(line);
-		else if (!strncmp(line, "#@CONTENT", llen))
-			putf(src);
+		char *strt;
+		if ((strt = strchr(line, delim)))
+			putsec(strtok(strt, tokdelims), llen, src);
 		else
-			putsec(line, llen, src);
+			puts(line);
 	}
 }
 
@@ -59,6 +61,7 @@ int main(int argc, char **argv)
 
 	/* TODO: PARSE OPTS */
 	delim = '#';
+	tokdelims[sizeof(tokdelims)-2] = delim;
 	special = '\0';
 
 	FILE *tmpl = fopen(argv[1], "r");
