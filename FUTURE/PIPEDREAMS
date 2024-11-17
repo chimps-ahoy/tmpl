@@ -45,7 +45,16 @@ the templates, at the very least).
 Here are is a list of programs that will be needed to make the site builder
 work (subject to change):
     - markdown-html (easy; people have done this, but i kinda wanna do it myself :3)
+		- `md2html' seems like it will be good enough. We just need to have line
+			breaks on either side of the section include to prevent silliness
+	- tmpl (unix templating too)
     - mdpp (easy enough; copy mostly from zs)
+		- can this just be merged with `tmpl'?
+			- section definitions are very similar to variables, so it makes
+				sense to handle them the same.
+			- it seems like its beyond the complexity of a templating program
+				to handle the shell preprocessing i want...
+			- this also means there isn't a combination of two different
+				symbols for variable and section definitions....
     - wikilink preprocessor (should also be easy, but could be criticised for
     requiring an additional pass)
-    - (potentially) separate include mechanism for template files
