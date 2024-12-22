@@ -36,8 +36,8 @@ static void putsec(char *sec, size_t slen, FILE *src)
 		return;
 	}
 
-	char * line = strdup(PREAMBLE"\n");
-	size_t llen = sizeof(PREAMBLE"\n");
+	char * line = strdup("#"PREAMBLE);
+	size_t llen = sizeof("#"PREAMBLE);
 	int    endl = llen + 1;
 	bool print = false;
 	do {
