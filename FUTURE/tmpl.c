@@ -34,8 +34,8 @@ static void putsec(char *sec, size_t slen, FILE *src)
 		return;
 	}
 	char * line = strdup("@HEADER\n");
-	size_t llen = sizeof("@HEADER\n");;
-	int    endl = 9;
+	size_t llen = sizeof("@HEADER\n");
+	int    endl = llen + 1;
 	bool print = false;
 	do {
 		line[endl-1] = '\0';
