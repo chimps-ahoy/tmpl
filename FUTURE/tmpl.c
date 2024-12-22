@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define die(msg) fprintf(stderr, "%s: " msg "\n", argv[0])
+#define die(msg) fprintf(stderr, "%s: %s\n", argv[0], msg)
 #define USAGE "[ -s char ][ -h char ] TEMPLATE FILE"
 
 #define MIN(x,y) (((x)<(y))?(x):(y))
