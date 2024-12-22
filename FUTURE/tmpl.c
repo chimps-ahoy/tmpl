@@ -9,6 +9,8 @@
 
 #define MIN(x,y) (((x)<(y))?(x):(y))
 
+#define ENTIRE_FILE "@CONTENT"
+#define PREAMBLE "@HEADER"
 static char delim;
 static char tokdelims[5] = { ' ', '\t', '\n' };
 static char special;
@@ -29,12 +31,13 @@ static void putf(FILE *f)
 /* IDEA: putsec and subst coroutines?? */
 static void putsec(char *sec, size_t slen, FILE *src)
 {
-	if (!strncmp(sec, "@CONTENT", MIN(slen,sizeof("@CONTENT")))) {
+	if (!strncmp(sec, ENTIRE_FILE, MIN(slen, sizeof(ENTIRE_FILE)))) {
 		putf(src);
 		return;
 	}
-	char * line = strdup("@HEADER\n");
-	size_t llen = sizeof("@HEADER\n");
+
+	char * line = strdup(PREAMBLE"\n");
+	size_t llen = sizeof(PREAMBLE"\n");
 	int    endl = llen + 1;
 	bool print = false;
 	do {
