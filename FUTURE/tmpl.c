@@ -60,7 +60,7 @@ static void subst(FILE *tmpl, FILE *src)
 		if (*strt == delim)
 			putsec(strtok(strt, tokdelims), llen, src);
 		else
-			puts(line);
+			fputs(line, stdout);
 	}
 }
 
