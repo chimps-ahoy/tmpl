@@ -23,8 +23,10 @@ static char *ltrim(char *s)
 
 static void putf(FILE *f)
 {
-	char c;
-	while ((c = getc(f)) != EOF) putc(c, stdout);
+	char *s = NULL;
+	size_t l = 0;
+	getdelim(&s, &l, EOF, f);
+	fputs(s, stdout);
 	rewind(f);
 }
 
