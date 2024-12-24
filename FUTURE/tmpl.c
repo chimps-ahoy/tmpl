@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
 #define die(msg) fprintf(stderr, "%s: %s\n", argv[0], msg)
 #define USAGE "[ -s char ][ -h char ] TEMPLATE FILE"
@@ -12,14 +11,8 @@
 #define ENTIRE_FILE "@CONTENT"
 #define PREAMBLE "@HEADER"
 static char delim;
-static char tokdelims[5] = { ' ', '\t', '\n' };
+static char tokdelims[5] = { 0, ' ', '\t', '\n' };
 static char special;
-
-static char *ltrim(char *s)
-{
-	while (*s && isspace(*s)) s++;
-	return s;
-}
 
 static void putf(FILE *f)
 {
@@ -58,7 +51,7 @@ static void subst(FILE *tmpl, FILE *src)
 	char *line = NULL;
 	size_t llen = 0;
 	while ((endl = getline(&line, &llen, tmpl)) > 0) {
-		char *strt = ltrim(line);
+		char *strt = line + strspn(line, tokdelims+1);
 		if (*strt == delim)
 			putsec(strtok(strt, tokdelims), llen, src);
 		else
@@ -73,7 +66,7 @@ int main(int argc, char **argv)
 
 	/* TODO: PARSE OPTS */
 	delim = '#';
-	tokdelims[sizeof(tokdelims)-2] = delim;
+	tokdelims[0] = delim;
 	special = '\0';
 
 	FILE *tmpl = fopen(argv[1], "r");
